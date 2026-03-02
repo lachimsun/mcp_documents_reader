@@ -697,7 +697,7 @@ wheels = [
 
 [[package]]
 name = "mcp-documents-reader"
-version = "1.2.0"
+version = "1.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
@@ -724,15 +724,15 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=0.28.0" },
-    { name = "mcp", specifier = ">=1.23.0" },
+    { name = "mcp", specifier = ">=1.26.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "pypdf", specifier = ">=6.7.1" },
+    { name = "pypdf", specifier = ">=6.7.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
-    { name = "typing-extensions", specifier = ">=4.12.0" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
 ]
 provides-extras = ["dev"]
 

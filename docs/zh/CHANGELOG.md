@@ -5,6 +5,24 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.2.1] - 2025-03-02
+
+### 安全修复
+
+- **pypdf 安全漏洞**：升级 pypdf>=6.7.4，修复 3 个 CVE
+  - CVE-2026-28351: RunLengthDecode 流可耗尽 RAM
+  - CVE-2026-27888: FlateDecode XFA 流可耗尽 RAM
+  - CVE-2026-27628: 循环引用导致无限循环
+- **MCP SDK 升级**：升级 mcp>=1.26.0
+- **测试代码安全**：重构路径遍历测试代码，避免静态分析误报
+
+### 变更
+
+- **依赖升级**：
+  - mcp>=1.23.0 → mcp>=1.26.0
+  - pypdf>=6.7.1 → pypdf>=6.7.4
+  - typing_extensions>=4.12.0 → typing_extensions>=4.15.0
+
 ## [1.2.0] - 2025-03-02
 
 ### 安全修复

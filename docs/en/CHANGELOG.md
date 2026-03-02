@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-03-02
+
+### Security Fixes
+
+- **pypdf Security Vulnerabilities**: Upgraded pypdf>=6.7.4, fixing 3 CVEs
+  - CVE-2026-28351: RunLengthDecode streams can exhaust RAM
+  - CVE-2026-27888: FlateDecode XFA streams can exhaust RAM
+  - CVE-2026-27628: Circular references cause infinite loop
+- **MCP SDK Upgrade**: Upgraded mcp>=1.26.0
+- **Test Code Security**: Refactored path traversal test code to avoid static analysis false positives
+
+### Changed
+
+- **Dependency Upgrades**:
+  - mcp>=1.23.0 → mcp>=1.26.0
+  - pypdf>=6.7.1 → pypdf>=6.7.4
+  - typing_extensions>=4.12.0 → typing_extensions>=4.15.0
+
 ## [1.2.0] - 2025-03-02
 
 ### Security Fixes
