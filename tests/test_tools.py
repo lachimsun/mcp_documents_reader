@@ -62,14 +62,15 @@ class TestGetDocumentPath:
         assert result.endswith("fixtures") or result.endswith("fixtures" + os.sep)
 
     def test_get_document_path_with_subdirectory(self, mock_context: object) -> None:
-        """测试包含子目录的文件名。
+        """测试包含子目录的文件名会被安全处理（子目录被移除）。
 
         Args:
             mock_context: 模拟的上下文对象
         """
         result = _get_document_path(mock_context, "subdir/test.txt")
 
-        assert "subdir" in result
+        # 子目录被 basename 移除，只保留文件名
+        assert "subdir" not in result
         assert "test.txt" in result
 
 

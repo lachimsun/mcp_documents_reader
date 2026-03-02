@@ -209,10 +209,10 @@ Read any supported document type.
 ## Dependencies
 
 ### Core Dependencies
-- `mcp` >= 0.1.0 - MCP protocol implementation
-- `python-docx` >= 0.8.11 - DOCX file reading
-- `PyPDF2` >= 3.0.1 - PDF file reading
-- `openpyxl` >= 3.0.10 - Excel file reading
+- `mcp` >= 1.23.0 - MCP protocol implementation
+- `python-docx` >= 1.2.0 - DOCX file reading
+- `pypdf` >= 6.7.1 - PDF file reading (replaces PyPDF2)
+- `openpyxl` >= 3.1.5 - Excel file reading
 
 ### Development Dependencies
 - `pytest` >= 8.0.0 - Testing framework

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from docx import Document as DocxDocument
 from mcp.server.fastmcp import FastMCP
 from openpyxl import load_workbook
-from PyPDF2 import PdfReader as PyPdfReader
+from pypdf import PdfReader as PyPdfReader
 from typing_extensions import override
 
 # Directory where documents are stored
@@ -193,12 +193,34 @@ class DocumentReaderFactory:
 
 
 def _get_document_path(ctx: object, filename: str) -> str:
-    """Get full document path from context or environment"""
-    try:
-        doc_dir = getattr(ctx, "document_directory", DOCUMENT_DIRECTORY)
-    except Exception:
-        doc_dir = DOCUMENT_DIRECTORY
-    return os.path.join(doc_dir, filename)
+    """获取文档路径，防止路径遍历攻击。
+
+    Args:
+        ctx: FastMCP 上下文对象
+        filename: 文件名
+
+    Returns:
+        str: 安全的完整文件路径
+
+    Raises:
+        ValueError: 当检测到路径遍历攻击时
+    """
+    doc_dir = getattr(ctx, "document_directory", DOCUMENT_DIRECTORY)
+
+    # 使用 basename 防止路径遍历
+    safe_filename = os.path.basename(filename)
+
+    # 构建完整路径
+    full_path = os.path.join(doc_dir, safe_filename)
+
+    # 验证路径在允许的目录内
+    real_path = os.path.realpath(full_path)
+    real_doc_dir = os.path.realpath(doc_dir)
+
+    if not real_path.startswith(real_doc_dir + os.sep) and real_path != real_doc_dir:
+        raise ValueError("Access denied: path outside document directory")
+
+    return full_path
 
 
 @mcp.tool()
@@ -211,10 +233,13 @@ def read_document(ctx: object, filename: str) -> str:
     :param filename: Name of the document file to read
     :return: Extracted text from the document
     """
-    doc_path = _get_document_path(ctx, filename)
+    try:
+        doc_path = _get_document_path(ctx, filename)
+    except ValueError:
+        return "Error: Invalid file path."
 
     if not os.path.exists(doc_path):
-        return f"Error: File '{filename}' not found at {doc_path}."
+        return f"Error: File '{filename}' not found."
 
     if not DocumentReaderFactory.is_supported(doc_path):
         return f"Error: Unsupported document type for file '{filename}'."

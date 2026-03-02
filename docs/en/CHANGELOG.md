@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-03-02
+
+### Security Fixes
+
+- **MCP SDK Security Vulnerabilities**: Upgraded mcp>=1.23.0, fixed 3 high-severity CVEs
+  - CVE-2025-53365: Unhandled exception in Streamable HTTP Transport leading to DoS
+  - CVE-2025-53366: FastMCP Server validation error leading to DoS
+  - CVE-2025-66416: DNS rebinding protection not enabled by default
+- **PyPDF2 Security Vulnerability**: Replaced with pypdf>=6.7.1, fixed CVE-2023-36464
+- **Path Traversal Protection**: Added explicit path validation to prevent arbitrary file read attacks
+- **Error Message Sanitization**: Removed full paths from error messages to prevent information disclosure
+
+### Added
+
+- **PyPI Package Metadata**: Added project.urls linking to GitHub repository
+
+### Changed
+
+- **Dependency Upgrades**:
+  - mcp>=0.1.0 → mcp>=1.23.0
+  - PyPDF2>=3.0.1 → pypdf>=6.7.1
+  - python-docx>=0.8.11 → python-docx>=1.2.0
+  - openpyxl>=3.0.10 → openpyxl>=3.1.5
+  - typing_extensions>=4.0.0 → typing_extensions>=4.12.0
+- **CI/CD Migration**: Migrated from pip to uv for faster builds
+
 ## [1.1.0] - 2025-03-01
 
 ### Fixed

@@ -62,6 +62,8 @@ content = reader.read("/path/to/document.docx")
 
 Reads PDF documents.
 
+> **Note:** Starting from v1.2.0, the PDF reader has been migrated from PyPDF2 to pypdf (more secure and better maintained).
+
 ```python
 from mcp_documents_reader import PdfReader
 

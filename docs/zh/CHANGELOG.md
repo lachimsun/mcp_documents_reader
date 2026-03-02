@@ -5,6 +5,32 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0] - 2025-03-02
+
+### 安全修复
+
+- **MCP SDK 安全漏洞**：升级 mcp>=1.23.0，修复 3 个高危 CVE
+  - CVE-2025-53365: Streamable HTTP Transport 未处理异常导致 DoS
+  - CVE-2025-53366: FastMCP Server 验证错误导致 DoS
+  - CVE-2025-66416: DNS rebinding 保护默认未启用
+- **PyPDF2 安全漏洞**：替换为 pypdf>=6.7.1，修复 CVE-2023-36464
+- **路径遍历防护**：添加显式路径验证，防止任意文件读取攻击
+- **错误信息脱敏**：移除错误信息中的完整路径，防止信息泄露
+
+### 新增
+
+- **PyPI 包元数据**：添加 project.urls，链接到 GitHub 仓库
+
+### 变更
+
+- **依赖升级**：
+  - mcp>=0.1.0 → mcp>=1.23.0
+  - PyPDF2>=3.0.1 → pypdf>=6.7.1
+  - python-docx>=0.8.11 → python-docx>=1.2.0
+  - openpyxl>=3.0.10 → openpyxl>=3.1.5
+  - typing_extensions>=4.0.0 → typing_extensions>=4.12.0
+- **CI/CD 迁移**：从 pip 迁移到 uv，提升构建速度
+
 ## [1.1.0] - 2025-03-01
 
 ### 修复

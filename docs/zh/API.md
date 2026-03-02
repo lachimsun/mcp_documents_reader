@@ -62,6 +62,8 @@ content = reader.read("/path/to/document.docx")
 
 读取 PDF 文档。
 
+> **注意：** 从 v1.2.0 开始，PDF 读取器已从 PyPDF2 迁移到 pypdf（更安全、维护更好）。
+
 ```python
 from mcp_documents_reader import PdfReader
 
