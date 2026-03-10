@@ -200,12 +200,6 @@ if DocumentReaderFactory.is_supported("file.xlsx"):
 |------|------|------|------|
 | filename | string | ✅ | 文档文件路径，支持绝对路径或相对路径 |
 
-## 环境变量
-
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| `DOCUMENT_DIRECTORY` | 存储文档的目录 | `./documents` |
-
 ## 依赖
 
 ### 核心依赖

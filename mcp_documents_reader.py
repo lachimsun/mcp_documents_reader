@@ -1,8 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from pathlib import Path
 
 from docx import Document as DocxDocument
 from mcp.server.fastmcp import FastMCP
@@ -10,38 +8,7 @@ from openpyxl import load_workbook
 from pypdf import PdfReader as PyPdfReader
 from typing_extensions import override
 
-# Directory where documents are stored
-DOCUMENT_DIRECTORY = os.getenv("DOCUMENT_DIRECTORY", "./documents")
-
-
-@dataclass
-class AppContext:
-    """Application context for lifecycle management."""
-
-    document_directory: str
-
-
-# Initialize the MCP server (lifespan added below)
 mcp = FastMCP("Document Reader")
-
-
-@asynccontextmanager
-async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
-    """Manage application lifecycle with type-safe context"""
-    try:
-        # Ensure document directory exists
-        os.makedirs(DOCUMENT_DIRECTORY, exist_ok=True)
-        yield AppContext(document_directory=DOCUMENT_DIRECTORY)
-    finally:
-        # Cleanup (if needed)
-        pass
-
-
-# Assign lifespan to server
-mcp.lifespan = app_lifespan  # type: ignore[reportAttributeAccessIssue]
-
-
-# ------------------------- Document Reader Architecture -------------------------
 
 
 class DocumentReader(ABC):
@@ -63,12 +30,10 @@ class DocxReader(DocumentReader):
             doc = DocxDocument(file_path)
             text = []
 
-            # Extract paragraph text
             for paragraph in doc.paragraphs:
                 if paragraph.text:
                     text.append(paragraph.text)
 
-            # Extract table content
             for table in doc.tables:
                 for row in table.rows:
                     row_text = []
@@ -96,7 +61,6 @@ class PdfReader(DocumentReader):
                 pdf_reader = PyPdfReader(file)
                 text = []
 
-                # Extract text from each page
                 for page in pdf_reader.pages:
                     page_text = page.extract_text()
                     if page_text:
@@ -114,7 +78,6 @@ class TxtReader(DocumentReader):
     @override
     def read(self, file_path: str) -> str:
         """Read and extract text from TXT file with encoding handling"""
-        # Supported encodings in priority order
         encodings = ["utf-8", "gbk", "gb2312", "latin-1"]
 
         for encoding in encodings:
@@ -140,18 +103,16 @@ class ExcelReader(DocumentReader):
             wb = load_workbook(file_path, read_only=True)
             text = []
 
-            # Extract text from all sheets
             for sheet_name in wb.sheetnames:
                 sheet = wb[sheet_name]
                 text.append(f"=== Sheet: {sheet_name} ===")
 
-                # Extract cell content
                 for row in sheet.iter_rows(values_only=True):
                     row_text = [str(cell) if cell is not None else "" for cell in row]
-                    if any(row_text):  # Only add non-empty rows
+                    if any(row_text):
                         text.append("\t".join(row_text))
 
-                text.append("")  # Add blank line between sheets
+                text.append("")
 
             extracted_text = "\n".join(text)
             wb.close()
@@ -165,7 +126,6 @@ class ExcelReader(DocumentReader):
 class DocumentReaderFactory:
     """Factory for creating document readers based on file extension"""
 
-    # Mapping of file extensions to reader classes
     _readers: dict[str, type[DocumentReader]] = {
         ".txt": TxtReader,
         ".docx": DocxReader,
@@ -189,69 +149,31 @@ class DocumentReaderFactory:
         return ext in cls._readers
 
 
-# ------------------------- Tool Functions -------------------------
-
-
-def _get_document_path(ctx: object, filename: str) -> str:
-    """获取文档路径，防止路径遍历攻击。
-
-    Args:
-        ctx: FastMCP 上下文对象
-        filename: 文件名
-
-    Returns:
-        str: 安全的完整文件路径
-
-    Raises:
-        ValueError: 当检测到路径遍历攻击时
-    """
-    doc_dir = getattr(ctx, "document_directory", DOCUMENT_DIRECTORY)
-
-    # 使用 basename 防止路径遍历
-    safe_filename = os.path.basename(filename)
-
-    # 构建完整路径
-    full_path = os.path.join(doc_dir, safe_filename)
-
-    # 验证路径在允许的目录内
-    real_path = os.path.realpath(full_path)
-    real_doc_dir = os.path.realpath(doc_dir)
-
-    if not real_path.startswith(real_doc_dir + os.sep) and real_path != real_doc_dir:
-        raise ValueError("Access denied: path outside document directory")
-
-    return full_path
-
-
 @mcp.tool()
-def read_document(ctx: object, filename: str) -> str:
+def read_document(filename: str) -> str:
     """
     Reads and extracts text from a specified document file.
     Supports multiple document types: TXT, DOCX, PDF, Excel (XLSX, XLS).
 
-    :param ctx: FastMCP context
-    :param filename: Name of the document file to read
+    :param filename: Path to the document file to read
+        (supports absolute or relative paths)
     :return: Extracted text from the document
     """
-    try:
-        doc_path = _get_document_path(ctx, filename)
-    except ValueError:
-        return "Error: Invalid file path."
+    file_path = Path(filename)
 
-    if not os.path.exists(doc_path):
+    if not file_path.exists():
         return f"Error: File '{filename}' not found."
 
-    if not DocumentReaderFactory.is_supported(doc_path):
+    if not DocumentReaderFactory.is_supported(str(file_path)):
         return f"Error: Unsupported document type for file '{filename}'."
 
     try:
-        reader = DocumentReaderFactory.get_reader(doc_path)
-        return reader.read(doc_path)
+        reader = DocumentReaderFactory.get_reader(str(file_path))
+        return reader.read(str(file_path))
     except Exception as e:
         return f"Error reading document: {str(e)}"
 
 
-# Run the MCP server
 def main():
     mcp.run()
 

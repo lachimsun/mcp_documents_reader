@@ -200,12 +200,6 @@ Read any supported document type.
 |-----------|------|----------|-------------|
 | filename | string | ✅ | Document file path, supports absolute or relative paths |
 
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DOCUMENT_DIRECTORY` | Directory where documents are stored | `./documents` |
-
 ## Dependencies
 
 ### Core Dependencies
