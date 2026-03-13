@@ -205,7 +205,7 @@ Read any supported document type.
 ### Core Dependencies
 - `mcp` >= 1.26.0 - MCP protocol implementation
 - `python-docx` >= 1.2.0 - DOCX file reading
-- `pypdf` >= 6.7.4 - PDF file reading (replaces PyPDF2)
+- `pypdf` >= 6.8.0 - PDF file reading (replaces PyPDF2)
 - `openpyxl` >= 3.1.5 - Excel file reading
 
 ### Development Dependencies

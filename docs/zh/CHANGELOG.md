@@ -5,6 +5,18 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.3.1] - 2026-03-13
+
+### 安全修复
+
+- **pypdf 安全漏洞**：升级 pypdf>=6.8.0，修复 CVE-2026-28804
+  - 修复 ASCIIHexDecode 流解码效率问题，防止 DoS 攻击
+
+### 变更
+
+- **依赖升级**：
+  - pypdf>=6.7.4 → pypdf>=6.8.0
+
 ## [1.3.0] - 2025-03-10
 
 ### 变更

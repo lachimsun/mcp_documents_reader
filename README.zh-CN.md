@@ -205,7 +205,7 @@ if DocumentReaderFactory.is_supported("file.xlsx"):
 ### 核心依赖
 - `mcp` >= 1.26.0 - MCP 协议实现
 - `python-docx` >= 1.2.0 - DOCX 文件读取
-- `pypdf` >= 6.7.4 - PDF 文件读取（替代 PyPDF2）
+- `pypdf` >= 6.8.0 - PDF 文件读取（替代 PyPDF2）
 - `openpyxl` >= 3.1.5 - Excel 文件读取
 
 ### 开发依赖

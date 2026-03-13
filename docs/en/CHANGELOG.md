@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-03-13
+
+### Security Fixes
+
+- **pypdf Security Vulnerability**: Upgraded pypdf>=6.8.0, fixing CVE-2026-28804
+  - Fixed inefficient decoding of ASCIIHexDecode streams, preventing DoS attacks
+
+### Changed
+
+- **Dependency Upgrades**:
+  - pypdf>=6.7.4 → pypdf>=6.8.0
+
 ## [1.3.0] - 2025-03-10
 
 ### Changed
