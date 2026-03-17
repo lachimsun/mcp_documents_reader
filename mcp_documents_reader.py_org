@@ -6,10 +6,6 @@ from docx import Document as DocxDocument
 from mcp.server.fastmcp import FastMCP
 from openpyxl import load_workbook
 from pypdf import PdfReader as PyPdfReader
-
-import fitz  # PyMuPDF
-from typing import Optional
-
 from typing_extensions import override
 
 mcp = FastMCP("Document Reader")
@@ -55,81 +51,25 @@ class DocxReader(DocumentReader):
 
 
 class PdfReader(DocumentReader):
-    """Zaawansowany czytnik PDF obsługujący tabele i strukturę dokumentu"""
+    """PDF document reader implementation"""
 
     @override
-    def read(self, file_path: str, start_page: int = 1, end_page: int = None) -> str:
+    def read(self, file_path: str) -> str:
+        """Read and extract text from PDF file"""
         try:
-            doc = fitz.open(file_path)
-            total_pages = len(doc)
+            with open(file_path, "rb") as file:
+                pdf_reader = PyPdfReader(file)
+                text = []
 
-            # Zakres stron (1-indexed)
-            start_idx = max(0, start_page - 1)
-            end_idx = min(end_page if end_page else total_pages, total_pages)
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text.append(page_text.strip())
 
-            output = []
-            output.append(f"--- INFO: Dokument ma {total_pages} stron. Czytam {start_idx+1}-{end_idx} ---")
-
-            for page_num in range(start_idx, end_idx):
-                page = doc[page_num]
-
-                # 1. Wyciąganie tekstu z zachowaniem układu (layout=True)
-                text = page.get_text("blocks")
-                # Sortowanie bloków tekstu (góra-dół, lewo-prawo)
-                text.sort(key=lambda b: (b[1], b[0]))
-
-                output.append(f"\n[STRONA {page_num + 1}]")
-
-                for block in text:
-                    # block[4] to treść tekstu
-                    block_text = block[4].strip()
-                    if block_text:
-                        output.append(block_text)
-
-                # 2. Informacja o obrazach
-                image_list = page.get_images(full=True)
-                if image_list:
-                    output.append(f"\n[INFO: Na stronie {page_num+1} znajduje się {len(image_list)} obrazów/grafik - nieprzetworzone]")
-
-                # 3. Separator stron
-                output.append("-" * 20)
-
-            doc.close()
-            full_text = "\n".join(output)
-
-            # Zabezpieczenie przed ucinaniem przez protokół (limit ok. 30k znaków na chunk dla stabilności)
-            if len(full_text) > 50000:
-                return full_text[:50000] + "\n\n...[UWAGA: Tekst zbyt długi, ucięto. Użyj parametrów start_page/end_page, aby przeczytać resztę]..."
-
-            return full_text
-
+                extracted_text = "\n\n".join(text)
+                return extracted_text if extracted_text else "No text found in the PDF."
         except Exception as e:
-            return f"Błąd odczytu PDF (PyMuPDF): {str(e)}"
-
-# Poprawione narzędzie MCP
-@mcp.tool()
-def read_document(filename: str, start_page: int = 1, end_page: int = 5) -> str:
-    """
-    Czyta tekst z dokumentu (PDF, DOCX, TXT, Excel).
-    Dla PDF-ów z tabelami/obrazami zaleca się czytanie po 5-10 stron naraz,
-    aby uniknąć problemów z limitem danych.
-    """
-    file_path = Path(filename)
-    if not file_path.exists():
-        return f"Błąd: Plik {filename} nie istnieje."
-
-    try:
-        # Sprawdzamy rozszerzenie
-        ext = file_path.suffix.lower()
-        if ext == ".pdf":
-            reader = PdfReader()
-            return reader.read(str(file_path), start_page, end_page)
-        else:
-            # Dla pozostałych formatów używamy starej fabryki
-            reader = DocumentReaderFactory.get_reader(str(file_path))
-            return reader.read(str(file_path))
-    except Exception as e:
-        return f"Wystąpił błąd: {str(e)}"
+            return f"Error reading PDF: {str(e)}"
 
 
 class TxtReader(DocumentReader):
