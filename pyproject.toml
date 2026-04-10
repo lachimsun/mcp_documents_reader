@@ -4,7 +4,7 @@ version = "1.3.1"
 description = "An MCP enabled multi-format document reader supporting DOCX, PDF, TXT, and Excel files"
 keywords = ["mcp", "model-context-protocol", "document-reader", "pdf", "docx", "excel"]
 authors = [
-  { name = "xt765", email = "xt765@foxmail.com" }
+  { name = "lachimsun", email = "lachimsun@example.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,10 +18,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/xt765/mcp_documents_reader"
-Repository = "https://github.com/xt765/mcp_documents_reader"
-Issues = "https://github.com/xt765/mcp_documents_reader/issues"
-Documentation = "https://github.com/xt765/mcp_documents_reader#readme"
+Homepage = "https://github.com/lachimsun/mcp_documents_reader"
+Repository = "https://github.com/lachimsun/mcp_documents_reader"
+Issues = "https://github.com/lachimsun/mcp_documents_reader/issues"
+Documentation = "https://github.com/lachimsun/mcp_documents_reader#readme"
 
 [project.optional-dependencies]
 dev = [

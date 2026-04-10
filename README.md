@@ -1,6 +1,6 @@
 <h1 align="center">MCP Document Reader</h1>
 
-<!-- mcp-name: io.github.xt765/mcp_documents_reader -->
+<!-- mcp-name: io.github.lachimsun/mcp_documents_reader -->
 
 <p align="center"><strong>MCP (Model Context Protocol) Document Reader - A powerful MCP tool for reading documents in multiple formats, enabling AI agents to truly "read" your documents.</strong></p>
 
@@ -8,16 +8,16 @@
 
 <p align="center">
   <a href="https://blog.csdn.net/Yunyi_Chi"><img src="https://img.shields.io/badge/CSDN-玄同765-orange.svg?style=flat&logo=csdn" alt="CSDN"></a>
-  <a href="https://github.com/xt765/mcp_documents_reader"><img src="https://img.shields.io/badge/GitHub-mcp_documents_reader-black.svg?style=flat&logo=github" alt="GitHub"></a>
-  <a href="https://gitee.com/xt765/mcp_documents_reader"><img src="https://img.shields.io/badge/Gitee-mcp_documents_reader-red.svg?style=flat&logo=gitee" alt="Gitee"></a>
+  <a href="https://github.com/lachimsun/mcp_documents_reader"><img src="https://img.shields.io/badge/GitHub-mcp_documents_reader-black.svg?style=flat&logo=github" alt="GitHub"></a>
+  <a href="https://gitee.com/lachimsun/mcp_documents_reader"><img src="https://img.shields.io/badge/Gitee-mcp_documents_reader-red.svg?style=flat&logo=gitee" alt="Gitee"></a>
 </p>
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat&logo=opensourceinitiative" alt="License"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg?style=flat&logo=python" alt="Python"></a>
   <a href="https://pypi.org/project/mcp-documents-reader/"><img src="https://img.shields.io/pypi/v/mcp-documents-reader.svg?logo=pypi" alt="PyPI Version"></a>
   <a href="https://pepy.tech/project/mcp-documents-reader"><img src="https://img.shields.io/pepy/dt/mcp-documents-reader.svg?logo=pypi&label=PyPI%20Downloads" alt="PyPI Downloads"></a>
-  <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.xt765/mcp_documents_reader"><img src="https://img.shields.io/badge/MCP-Registry-blue?logo=modelcontextprotocol" alt="MCP Registry"></a>
-  <a href="https://mcp-marketplace.io/server/io-github-xt765-mcp-documents-reader"><img src="https://img.shields.io/badge/MCP-Marketplace-22c55e.svg?style=flat&logo=shopify&logoColor=white" alt="MCP Marketplace"></a>
+  <a href="https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.lachimsun/mcp_documents_reader"><img src="https://img.shields.io/badge/MCP-Registry-blue?logo=modelcontextprotocol" alt="MCP Registry"></a>
+  <a href="https://mcp-marketplace.io/server/io-github-lachimsun-mcp-documents-reader"><img src="https://img.shields.io/badge/MCP-Marketplace-22c55e.svg?style=flat&logo=shopify&logoColor=white" alt="MCP Marketplace"></a>
 </p>
 
 ## Features
@@ -82,7 +82,7 @@ pip install mcp-documents-reader
 ### From Source
 
 ```bash
-git clone https://github.com/xt765/mcp_documents_reader.git
+git clone https://github.com/lachimsun/mcp_documents_reader.git
 cd mcp_documents_reader
 pip install -e .
 ```
@@ -128,7 +128,7 @@ Add the following to your MCP configuration file:
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/xt765/mcp_documents_reader",
+        "git+https://github.com/lachimsun/mcp_documents_reader",
         "mcp_documents_reader"
       ]
     }
@@ -145,7 +145,7 @@ Add the following to your MCP configuration file:
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://gitee.com/xt765/mcp_documents_reader",
+        "git+https://gitee.com/lachimsun/mcp_documents_reader",
         "mcp_documents_reader"
       ]
     }
@@ -225,5 +225,5 @@ Issues and Pull Requests are welcome!
 
 ## Related Projects
 
-- [MCP Document Converter](https://github.com/xt765/mcp-document-converter) - MCP document converter supporting multiple format conversions
+- [MCP Document Converter](https://github.com/lachimsun/mcp-document-converter) - MCP document converter supporting multiple format conversions
 - [Model Context Protocol](https://modelcontextprotocol.io/) - Official Model Context Protocol documentation

@@ -1,255 +1,199 @@
 import os
+import traceback
+import io
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Optional, List, Union, Any
+from typing_extensions import override
 
+# --- DOCX IMPORTS ---
 from docx import Document as DocxDocument
+from docx.document import Document as _Document
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
+from docx.table import Table, _Cell
+from docx.text.paragraph import Paragraph
+
 from mcp.server.fastmcp import FastMCP, Image
 from openpyxl import load_workbook
-
 import fitz  # PyMuPDF
-from typing import Optional, List, Union, Any
+from PIL import Image as PILImage
 
-from typing_extensions import override
+# Allow processing of huge images (like 200 Mpix)
+PILImage.MAX_IMAGE_PIXELS = None
 
 mcp = FastMCP("Document Reader")
 
+# Configuration for image processing
+# We limit by total megapixels to balance resolution and transfer size
+MAX_TOTAL_PIXELS = 6_000_000  # ~6 Megapixels (e.g., 2449x2449 or equivalent area)
+TARGET_DPI = 300              # DPI for rendering PDF pages
+
+def process_image_for_transport(image_bytes: bytes) -> bytes:
+    """
+    Resizes and compresses images to ensure they fit within MCP transport limits
+    while preserving legibility of large drawings.
+    """
+    try:
+        img = PILImage.open(io.BytesIO(image_bytes))
+
+        # Calculate scaling factor based on area to preserve extreme aspect ratios
+        current_pixels = img.width * img.height
+        if current_pixels > MAX_TOTAL_PIXELS:
+            scale = (MAX_TOTAL_PIXELS / current_pixels) ** 0.5
+            new_width = int(img.width * scale)
+            new_height = int(img.height * scale)
+            img = img.resize((new_width, new_height), PILImage.Resampling.LANCZOS)
+
+        # Convert to RGB (removes alpha channel which saves space)
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+
+        output = io.BytesIO()
+        # Save as JPEG with high quality to keep text readable but file size small
+        img.save(output, format="JPEG", quality=85, optimize=True)
+        return output.getvalue()
+    except Exception as e:
+        print(f"Image processing error: {e}")
+        return image_bytes
 
 class DocumentReader(ABC):
-    """Abstract base class for document readers"""
-
     @abstractmethod
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
-        """Read and extract text and images from a document with pagination support"""
         pass
 
-
 class DocxReader(DocumentReader):
-    """DOCX document reader implementation with pagination and image support"""
+    """Handles DOCX structure and images."""
+
+    def _get_block_elements(self, parent):
+        if isinstance(parent, _Document):
+            parent_elm = parent.element.body
+        elif isinstance(parent, _Cell):
+            parent_elm = parent._tc
+        else:
+            return
+        for child in parent_elm.iterchildren():
+            if isinstance(child, CT_P): yield Paragraph(child, parent)
+            elif isinstance(child, CT_Tbl): yield Table(child, parent)
+
+    def _process_content(self, container, level=0) -> List[str]:
+        output = []
+        indent = "  " * level
+        for block in self._get_block_elements(container):
+            if isinstance(block, Paragraph):
+                if block.text.strip(): output.append(f"{indent}{block.text.strip()}")
+            elif isinstance(block, Table):
+                output.append(f"{indent}[TABLE]")
+                for row in block.rows:
+                    row_data = [ " ".join(self._process_content(cell, level + 1)).strip() for cell in row.cells ]
+                    output.append(f"{indent}  | {' | '.join(row_data)} |")
+        return output
 
     @override
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
-        """
-        Read and extract text/images from DOCX file.
-        Treats structural elements as items for pagination.
-        """
         try:
             doc = DocxDocument(file_path)
-            content_results: List[Union[str, Image]] = []
-            
-            # Temporary storage for all text items to apply pagination
-            text_items = []
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text_items.append(paragraph.text.strip())
-            
-            for table in doc.tables:
-                for row in table.rows:
-                    row_text = []
-                    for cell in row.cells:
-                        cell_text = " ".join([p.text for p in cell.paragraphs]).strip()
-                        if cell_text:
-                            row_text.append(cell_text)
-                    if row_text:
-                        text_items.append("\t".join(row_text))
-
-            # Pagination logic
-            items_per_page = 20
-            total_items = len(text_items)
-            total_pages = (total_items + items_per_page - 1) // items_per_page
-            
-            start_idx = (start_page - 1) * items_per_page
-            actual_end_page = end_page if end_page else start_page + 4
-            end_idx = min(actual_end_page * items_per_page, total_items)
-
-            if start_idx >= total_items and total_items > 0:
-                return [f"Requested start page {start_page} is out of range. Total virtual pages: {total_pages}"]
-
-            content_results.append(f"--- INFO: DOCX contains approx {total_pages} virtual pages. Reading pages {start_page}-{min(actual_end_page, total_pages)} ---")
-            
-            # Add text content for the range
-            page_text = "\n".join(text_items[start_idx:end_idx])
-            if page_text:
-                content_results.append(page_text)
+            all_text = self._process_content(doc)
+            results = ["\n".join(all_text[:100])] # Simplified text return
 
             # Extract images from DOCX
-            image_count = 0
+            img_count = 0
             for rel in doc.part.rels.values():
-                if "image" in rel.target_ref:
-                    image_count += 1
-                    # Only send images if we are on the first requested chunk or it's a small set
-                    if start_page == 1 and image_count <= 10:
-                        content_results.append(Image(data=rel.target_part.blob, format="image/png"))
-
-            if end_idx < total_items:
-                content_results.append(f"\n...[NOTE: More text content available. Use start_page={actual_end_page + 1} to continue]...")
-
-            return content_results if (text_items or image_count > 0) else ["No content found in the DOCX."]
+                if "image" in rel.target_ref and img_count < 3:
+                    processed = process_image_for_transport(rel.target_part.blob)
+                    results.append(Image(data=processed, format="image/jpeg"))
+                    img_count += 1
+            return results
         except Exception as e:
-            return [f"Error reading DOCX: {str(e)}"]
-
+            return [f"Docx Error: {str(e)}"]
 
 class PdfReader(DocumentReader):
-    """Advanced PDF reader supporting tables and embedded images"""
-
+    """
+    Renders PDF pages as images to handle large drawings properly
+    instead of extracting raw (often tiled) image objects.
+    """
     @override
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
         try:
             doc = fitz.open(file_path)
             total_pages = len(doc)
-
             start_idx = max(0, start_page - 1)
-            end_idx = min(end_page if end_page else total_pages, total_pages)
+            end_idx = min(end_page if end_page else start_page, total_pages)
 
             results: List[Union[str, Image]] = []
-            results.append(f"--- INFO: Document has {total_pages} pages. Reading {start_idx+1}-{end_idx} ---")
+            results.append(f"--- PDF: {total_pages} pages. Showing {start_idx+1}-{end_idx} ---")
 
             for page_num in range(start_idx, end_idx):
                 page = doc[page_num]
-                
-                # 1. Extract Text
-                blocks = page.get_text("blocks")
-                blocks.sort(key=lambda b: (b[1], b[0]))
-                
-                page_header = f"\n[PAGE {page_num + 1}]\n"
-                text_content = []
-                for block in blocks:
-                    if block[4].strip():
-                        text_content.append(block[4].strip())
-                
-                results.append(page_header + "\n".join(text_content))
 
-                # 2. Extract Images
-                image_list = page.get_images(full=True)
-                for img_index, img in enumerate(image_list):
-                    xref = img[0]
-                    base_image = doc.extract_image(xref)
-                    image_bytes = base_image["image"]
-                    image_ext = base_image["ext"]
-                    
-                    results.append(Image(data=image_bytes, format=f"image/{image_ext}"))
-                
-                results.append("-" * 20)
+                # 1. Get Text
+                text = page.get_text("text")
+                results.append(f"\n--- PAGE {page_num + 1} ---\n{text}")
+
+                # 2. Render Full Page as Image (Best for drawings/maps)
+                # We use a Matrix to scale to the desired DPI
+                zoom = TARGET_DPI / 72
+                mat = fitz.Matrix(zoom, zoom)
+                pix = page.get_pixmap(matrix=mat, alpha=False)
+
+                # Convert Pixmap to bytes
+                img_bytes = pix.tobytes("jpeg")
+
+                # Further scale and compress to fit transport limits
+                processed_img = process_image_for_transport(img_bytes)
+                results.append(Image(data=processed_img, format="image/jpeg"))
 
             doc.close()
             return results
-
         except Exception as e:
-            return [f"Error reading PDF (PyMuPDF): {str(e)}"]
-
+            return [f"PDF Error: {str(e)}"]
 
 class TxtReader(DocumentReader):
-    """TXT document reader implementation"""
-
     @override
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
-        encodings = ["utf-8", "gbk", "gb2312", "latin-1"]
-        for encoding in encodings:
-            try:
-                with open(file_path, "r", encoding=encoding) as f:
-                    lines = f.readlines()
-                
-                lines_per_page = 100
-                total_lines = len(lines)
-                start_idx = (start_page - 1) * lines_per_page
-                actual_end_page = end_page if end_page else start_page + 4
-                end_idx = min(actual_end_page * lines_per_page, total_lines)
-
-                if not lines:
-                    return ["No text found in the TXT file."]
-
-                chunk = "".join(lines[start_idx:end_idx])
-                if end_idx < total_lines:
-                    chunk += f"\n\n...[NOTE: Large TXT file. Showing lines {start_idx}-{end_idx} of {total_lines}]..."
-                
-                return [chunk]
-            except UnicodeDecodeError:
-                continue
-            except Exception as e:
-                return [f"Error reading TXT: {str(e)}"]
-
-        return ["Error reading TXT: Could not decode file."]
-
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            return [content[:20000]] # Limit return size
+        except Exception as e:
+            return [f"Txt Error: {str(e)}"]
 
 class ExcelReader(DocumentReader):
-    """Excel document reader implementation"""
-
     @override
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
         try:
             wb = load_workbook(file_path, read_only=True)
-            text = []
-            for sheet_name in wb.sheetnames:
-                sheet = wb[sheet_name]
-                text.append(f"=== Sheet: {sheet_name} ===")
-                for row in sheet.iter_rows(values_only=True):
-                    row_text = [str(cell) if cell is not None else "" for cell in row]
-                    if any(row_text):
-                        text.append("\t".join(row_text))
-            
-            full_text = "\n".join(text)
-            wb.close()
-            
-            if len(full_text) > 30000:
-                full_text = full_text[:30000] + "\n\n...[WARNING: Excel output truncated]..."
-            
-            return [full_text] if full_text.strip() else ["No text found in the Excel file."]
+            res = []
+            for sheet in wb.worksheets:
+                res.append(f"Sheet: {sheet.title}")
+                for row in sheet.iter_rows(max_row=50, values_only=True):
+                    res.append("\t".join([str(c) if c else "" for c in row]))
+            return ["\n".join(res)[:15000]]
         except Exception as e:
-            return [f"Error reading Excel: {str(e)}"]
-
+            return [f"Excel Error: {str(e)}"]
 
 class DocumentReaderFactory:
-    """Factory for creating document readers based on file extension"""
-
-    _readers: dict[str, type[DocumentReader]] = {
-        ".txt": TxtReader,
-        ".tex": TxtReader,
-        ".docx": DocxReader,
-        ".pdf": PdfReader,
-        ".xlsx": ExcelReader,
-        ".xls": ExcelReader,
+    _readers = {
+        ".txt": TxtReader, ".tex": TxtReader, ".docx": DocxReader,
+        ".pdf": PdfReader, ".xlsx": ExcelReader, ".xls": ExcelReader,
     }
 
     @classmethod
     def get_reader(cls, file_path: str) -> DocumentReader:
-        _, ext = os.path.splitext(file_path.lower())
-        if ext not in cls._readers:
-            raise ValueError(f"Unsupported document type: {ext}")
+        ext = os.path.splitext(file_path.lower())[1]
+        if ext not in cls._readers: raise ValueError(f"Unsupported: {ext}")
         return cls._readers[ext]()
-
-    @classmethod
-    def is_supported(cls, file_path: str) -> bool:
-        _, ext = os.path.splitext(file_path.lower())
-        return ext in cls._readers
-
 
 @mcp.tool()
 def read_document(filename: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
-    """
-    Reads and extracts text and images from a document (PDF, DOCX, TXT, Excel).
-    Images are returned as visual objects that the model can analyze directly.
-
-    :param filename: Path to the document file.
-    :param start_page: Page/chunk number to start from (default 1).
-    :param end_page: Page/chunk number to stop at.
-    """
-    file_path = Path(filename)
-
-    if not file_path.exists():
-        return [f"Error: File '{filename}' not found."]
-
-    if not DocumentReaderFactory.is_supported(str(file_path)):
-        return [f"Error: Unsupported document type for file '{filename}'."]
-
+    """Reads documents. PDF pages are rendered as images to handle large drawings/maps."""
+    path = Path(filename)
+    if not path.exists(): return [f"Error: {filename} not found."]
     try:
-        reader = DocumentReaderFactory.get_reader(str(file_path))
-        return reader.read(str(file_path), start_page=start_page, end_page=end_page)
+        reader = DocumentReaderFactory.get_reader(str(path))
+        return reader.read(str(path), start_page=start_page, end_page=end_page)
     except Exception as e:
-        return [f"Error reading document: {str(e)}"]
-
-
-def main():
-    mcp.run()
-
+        return [f"Error: {str(e)}"]
 
 if __name__ == "__main__":
-    main()
+    mcp.run()
