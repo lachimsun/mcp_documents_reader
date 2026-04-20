@@ -152,9 +152,33 @@ class TxtReader(DocumentReader):
     @override
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
         try:
+            # Define how many lines represent a single "page"
+            lines_per_page = 100
+            start_idx = max(0, start_page - 1) * lines_per_page
+
+            # If end_page is not specified, we only read the requested start_page
+            target_end_page = end_page if end_page is not None else start_page
+            end_idx = target_end_page * lines_per_page
+
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
-            return [content[:20000]] # Limit return size
+                lines = f.readlines()
+
+            total_lines = len(lines)
+            total_pages = (total_lines + lines_per_page - 1) // lines_per_page
+
+            # Extract the specific range of lines
+            content_lines = lines[start_idx:end_idx]
+            content = "".join(content_lines)
+
+            if not content:
+                return [f"--- TEXT/TEX: End of file or no content found on pages {start_page}-{target_end_page} ---"]
+
+            # Add status header with file statistics
+            header = (
+                f"--- TEXT/TEX: {total_lines} lines, approx. {total_pages} pages. "
+                f"Showing pages {start_page}-{target_end_page} ---\n"
+            )
+            return [header + content]
         except Exception as e:
             return [f"Txt Error: {str(e)}"]
 
