@@ -152,13 +152,8 @@ class TxtReader(DocumentReader):
     @override
     def read(self, file_path: str, start_page: int = 1, end_page: Optional[int] = None) -> Any:
         try:
-            # Define how many lines represent a single "page"
+            # Each "page" is defined as 100 lines for manageable processing
             lines_per_page = 100
-            start_idx = max(0, start_page - 1) * lines_per_page
-
-            # If end_page is not specified, we only read the requested start_page
-            target_end_page = end_page if end_page is not None else start_page
-            end_idx = target_end_page * lines_per_page
 
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
@@ -166,19 +161,31 @@ class TxtReader(DocumentReader):
             total_lines = len(lines)
             total_pages = (total_lines + lines_per_page - 1) // lines_per_page
 
-            # Extract the specific range of lines
-            content_lines = lines[start_idx:end_idx]
-            content = "".join(content_lines)
+            # Normalize requested page range
+            current_start = max(1, start_page)
+            # If no end_page is provided, we default to reading just one page
+            current_end = end_page if end_page is not None else current_start
+            current_end = min(current_end, total_pages)
 
-            if not content:
-                return [f"--- TEXT/TEX: End of file or no content found on pages {start_page}-{target_end_page} ---"]
+            results: List[str] = []
 
-            # Add status header with file statistics
-            header = (
-                f"--- TEXT/TEX: {total_lines} lines, approx. {total_pages} pages. "
-                f"Showing pages {start_page}-{target_end_page} ---\n"
-            )
-            return [header + content]
+            # Metadata entry to inform the model about total document size
+            results.append(f"--- TEXT/TEX DOCUMENT INFO: Total lines: {total_lines}, Total pages: {total_pages} ---")
+
+            # Iterate through requested pages and add them as separate items in the list
+            for p in range(current_start, current_end + 1):
+                start_idx = (p - 1) * lines_per_page
+                end_idx = p * lines_per_page
+                page_content = "".join(lines[start_idx:end_idx])
+
+                if page_content:
+                    # Clearly delimit each page so the model knows its boundaries
+                    results.append(f"--- PAGE {p} OF {total_pages} ---\n{page_content}")
+
+            if len(results) <= 1: # Only header was added
+                return [f"--- TEXT/TEX: No content found in page range {start_page}-{end_page} ---"]
+
+            return results
         except Exception as e:
             return [f"Txt Error: {str(e)}"]
 
